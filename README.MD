@@ -1,7 +1,7 @@
 
 # PyFetch Dashboard
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
 [![Managed with uv](https://img.shields.io/badge/managed%20with-uv-000000.svg?logo=python&logoColor=white)](https://github.com/astral-sh/uv)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D6.svg?logo=windows)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
