@@ -22,18 +22,16 @@ except Exception:
 
 
 def get_openhardwaremonitor_metrics():
-    """Reads CPU Temp, CPU Wattage, and Fan Speeds directly from Open Hardware Monitor's WMI engine."""
-    metrics = {"temp": None, "power": None, "fan": None}
+    """Reads CPU/GPU Temp, CPU Wattage, and Fan Speeds in RPM directly from Open Hardware Monitor's WMI engine."""
+    metrics = {"temp": None, "power": None, "fan": None, "gpu_fan_rpm": None}
 
     try:
-        # OpenHardwareMonitor exposes sensors under 'root\OpenHardwareMonitor'
         ohm = wmi.WMI(namespace=r"root\OpenHardwareMonitor")
         sensors = ohm.Sensor()
 
         for sensor in sensors:
             # Check for CPU Temperature
             if sensor.SensorType == "Temperature" and "CPU" in sensor.Name:
-                # Core Average, Package, or first Core temp fallback
                 if "Package" in sensor.Name or "Core #1" in sensor.Name or "CPU Core" in sensor.Name:
                     metrics["temp"] = round(sensor.Value, 1)
 
@@ -42,13 +40,16 @@ def get_openhardwaremonitor_metrics():
                 if "Package" in sensor.Name or "Total" in sensor.Name or "CPU Cores" in sensor.Name:
                     metrics["power"] = round(sensor.Value, 1)
 
-            # Check for Fan Speeds
+            # Check for Fan Speeds in RPM
             elif sensor.SensorType == "Fan":
                 if sensor.Value and sensor.Value > 0:
-                    metrics["fan"] = int(sensor.Value)
+                    sensor_name = sensor.Name.lower()
+                    if "gpu" in sensor_name:
+                        metrics["gpu_fan_rpm"] = int(sensor.Value)
+                    else:
+                        metrics["fan"] = int(sensor.Value)
 
     except Exception:
-        # Fails silently if OpenHardwareMonitor isn't running or WMI namespace isn't accessible
         pass
 
     return metrics
@@ -236,6 +237,12 @@ def get_sys_info():
                 handle, pynvml.NVML_CLOCK_GRAPHICS)
             util = pynvml.nvmlDeviceGetUtilizationRates(handle).gpu
 
+            # Query GPU Fan Speed in RPM
+            try:
+                gpu_fan_rpm = pynvml.nvmlDeviceGetFanSpeedRPM(handle)
+            except Exception:
+                gpu_fan_rpm = cpu_hw.get("gpu_fan_rpm")
+
             mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
             gpu_mem_used = mem_info.used / (1024**3)
             gpu_mem_total = mem_info.total / (1024**3)
@@ -247,6 +254,7 @@ def get_sys_info():
                 "power": power,
                 "clock": clock,
                 "util": util,
+                "fan_rpm": gpu_fan_rpm,
                 "mem_used": gpu_mem_used,
                 "mem_total": gpu_mem_total,
                 "mem_pct": gpu_mem_pct,
@@ -340,9 +348,11 @@ def render_fetch():
     # GPU Rows
     for idx, gpu in enumerate(data["gpus"]):
         gpu_title = f"🎮 GPU {idx + 1}"
+        fan_text = f"🌀 [bold cyan]{gpu['fan_rpm']} RPM[/bold cyan]  " if gpu.get("fan_rpm") is not None else ""
+
         gpu_details = (
             f"[bold white]{gpu['name']}[/bold white] @ {gpu['clock']}MHz [{gpu['util']}%]\n"
-            f"🔥 [bold red]{gpu['temp']}°C[/bold red]  ⚡ [bold green]{gpu['power']}W[/bold green]  "
+            f"🔥 [bold red]{gpu['temp']}°C[/bold red]  ⚡ [bold green]{gpu['power']}W[/bold green]  {fan_text}"
             f"VRAM: {make_mini_bar(gpu['mem_pct'])} ({gpu['mem_used']:.1f}/{gpu['mem_total']:.1f} GiB)"
         )
         hw_table.add_row(gpu_title, gpu_details)
