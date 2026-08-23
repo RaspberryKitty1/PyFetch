@@ -1,15 +1,14 @@
 [project]
 name = "pyfetch"
 version = "0.1.0"
-description = "Add your description here"
+description = "Fast Linux system fetch CLI"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
     "psutil>=7.2.2",
     "rich>=15.0.0",
-    "wmi>=1.5.1",
 ]
+
 [project.optional-dependencies]
-Nvidia = [
-    "nvidia-ml-py>=12.535.133"
-]
+nvidia = ["nvidia-ml-py>=12.535.133"]
+amd = ["pyamdgpuinfo>=2.0.0"]
